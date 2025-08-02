@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MediCheck - Fast and comprehensive drug medicine information system">
+    <meta name="theme-color" content="#667eea">
+    <title>MediCheck - Drug Medicine Information System</title>
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="styles.css" as="style">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" as="style">
+    
+    <!-- Critical CSS inline for faster loading -->
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; z-index: 10000; }
+        .loading-screen .spinner { width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid white; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+    
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+  <body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="nav-brand">
+                <i class="fas fa-pills"></i>
+                <span>MediCheck</span>
+            </div>
+            <nav class="nav-menu">
+                <a href="#home" class="nav-link active">Home</a>
+                <a href="#search" class="nav-link">Search</a>
+                <a href="#about" class="nav-link">About</a>
+            </nav>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    Find Comprehensive <span class="highlight">Drug Information</span>
+                </h1>
+                <p class="hero-subtitle">
+                    Search for any drug by ID and get detailed information about its composition, 
+                    usage, side effects, and which medicines contain it.
+                </p>
+                <div class="hero-search">
+                    <div class="search-container">
+                        <input type="text" id="hero-search" placeholder="Enter Drug ID (e.g., ASP001, IBU123) or drug name" class="search-input" autocomplete="off">
+                        <button class="search-btn" onclick="searchDrug()" aria-label="Search">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <div id="search-suggestions" class="search-suggestions hidden"></div>
+                    </div>
+                    <div class="quick-search">
+                        <span>Quick search:</span>
+                        <button class="quick-btn" onclick="quickSearch('ASP001')">Aspirin</button>
+                        <button class="quick-btn" onclick="quickSearch('IBU123')">Ibuprofen</button>
+                        <button class="quick-btn" onclick="quickSearch('PAR456')">Paracetamol</button>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="floating-pills">
+                    <div class="pill pill-1" title="Pain Relief"><i class="fas fa-pills"></i></div>
+                    <div class="pill pill-2" title="Antibiotics"><i class="fas fa-capsules"></i></div>
+                    <div class="pill pill-3" title="Vitamins"><i class="fas fa-tablets"></i></div>
+                    <div class="pill pill-4" title="Heart Medicine"><i class="fas fa-heartbeat"></i></div>
+                    <div class="pill pill-5" title="Brain Health"><i class="fas fa-brain"></i></div>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">500+</div>
+                        <div class="stat-label">Drugs</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">1000+</div>
+                        <div class="stat-label">Medicines</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">Available</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Search Results Section -->
+    <section id="search-results" class="search-results hidden">
+        <div class="container">
+            <div class="results-header">
+                <h2 id="results-title">Search Results</h2>
+                <div class="results-actions">
+                    <button class="action-btn" onclick="exportResults()" title="Export Results">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="action-btn" onclick="printResults()" title="Print Results">
+                        <i class="fas fa-print"></i>
+                    </button>
+                    <button class="clear-results" onclick="clearResults()">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
+            <div id="results-container" class="results-container">
+                <!-- Results will be populated here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">Why Choose MediCheck?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-search-plus"></i>
+                    </div>
+                    <h3>Comprehensive Search</h3>
+                    <p>Search drugs by ID and get complete information including composition, usage, and side effects.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-database"></i>
+                    </div>
+                    <h3>Extensive Database</h3>
+                    <p>Access information from our comprehensive database of drugs and medicines.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Mobile Responsive</h3>
+                    <p>Use MediCheck on any device - desktop, tablet, or mobile phone.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Reliable Information</h3>
+                    <p>Get accurate and up-to-date drug information from trusted medical sources.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <div class="about-content">
+                <div class="about-text">
+                    <h2>About MediCheck</h2>
+                    <p>MediCheck is a comprehensive drug information system designed to help healthcare professionals, 
+                    pharmacists, and patients access detailed information about medications quickly and easily.</p>
+                    <p>Our platform provides detailed drug profiles including active ingredients, therapeutic uses, 
+                    dosage information, contraindications, and which medicines contain specific drugs.</p>
+                    <div class="stats">
+                        <div class="stat">
+                            <h3>500+</h3>
+                            <p>Drugs in Database</p>
+                        </div>
+                        <div class="stat">
+                            <h3>1000+</h3>
+                            <p>Medicine Records</p>
+                        </div>
+                        <div class="stat">
+                            <h3>24/7</h3>
+                            <p>Available Access</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-image">
+                    <div class="image-placeholder">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="nav-brand">
+                        <i class="fas fa-pills"></i>
+                        <span>MediCheck</span>
+                    </div>
+                    <p>Your trusted source for drug and medicine information.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Quick Links</h4>
+                    <a href="#home">Home</a>
+                    <a href="#search">Search</a>
+                    <a href="#about">About</a>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contact Info</h4>
+                    <p><i class="fas fa-envelope"></i> info@medicheck.com</p>
+                    <p><i class="fas fa-phone"></i> +1 (555) 123-4567</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 MediCheck. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="loading-spinner hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
