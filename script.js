@@ -362,16 +362,22 @@ const drugDatabase = {
     }
 };
 
-// Global variables
+// Global variables with performance optimizations
 let currentSearchResults = [];
+let searchCache = new Map();
+let debounceTimer = null;
+let isSearching = false;
 
-// DOM Elements
+// DOM Elements - Cached for better performance
 const heroSearchInput = document.getElementById('hero-search');
 const searchResultsSection = document.getElementById('search-results');
 const resultsContainer = document.getElementById('results-container');
 const loadingSpinner = document.getElementById('loading-spinner');
+const loadingScreen = document.getElementById('loading-screen');
 const hamburger = document.querySelector('.hamburger');
 const navMenu = document.querySelector('.nav-menu');
+const searchSuggestions = document.getElementById('search-suggestions');
+const resultsTitle = document.getElementById('results-title');
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -379,16 +385,49 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
-    // Add event listeners
+    // Hide loading screen with animation
+    setTimeout(() => {
+        loadingScreen.style.opacity = '0';
+        loadingScreen.style.transition = 'opacity 0.5s ease';
+        setTimeout(() => {
+            loadingScreen.style.display = 'none';
+        }, 500);
+    }, 1000);
+
+    // Enhanced search event listeners
     heroSearchInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
+            e.preventDefault();
             searchDrug();
         }
     });
 
-    // Mobile menu toggle
+    // Real-time search suggestions with debouncing
+    heroSearchInput.addEventListener('input', function(e) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            showSearchSuggestions(e.target.value);
+        }, 300);
+    });
+
+    // Focus and blur events for search input
+    heroSearchInput.addEventListener('focus', function() {
+        if (this.value.trim()) {
+            showSearchSuggestions(this.value);
+        }
+    });
+
+    heroSearchInput.addEventListener('blur', function() {
+        // Delay hiding suggestions to allow clicks
+        setTimeout(() => {
+            hideSuggestions();
+        }, 200);
+    });
+
+    // Mobile menu toggle with animation
     hamburger.addEventListener('click', function() {
         navMenu.classList.toggle('active');
+        this.classList.toggle('active');
     });
 
     // Smooth scrolling for navigation links
@@ -424,7 +463,7 @@ function initializeApp() {
     console.log('Available drug IDs:', Object.keys(drugDatabase));
 }
 
-// Main search function
+// Enhanced search function with caching
 function searchDrug() {
     const searchTerm = heroSearchInput.value.trim().toUpperCase();
     
@@ -433,14 +472,34 @@ function searchDrug() {
         return;
     }
 
-    showLoadingSpinner();
+    if (isSearching) return; // Prevent multiple simultaneous searches
+    
+    // Check cache first
+    if (searchCache.has(searchTerm)) {
+        const cachedResults = searchCache.get(searchTerm);
+        displaySearchResults(cachedResults, searchTerm);
+        showNotification('Results loaded from cache', 'info');
+        return;
+    }
 
-    // Simulate API call delay
+    isSearching = true;
+    showLoadingSpinner();
+    hideSuggestions();
+
+    // Simulate API call with realistic delay
     setTimeout(() => {
         const results = performSearch(searchTerm);
+        searchCache.set(searchTerm, results); // Cache results
         displaySearchResults(results, searchTerm);
         hideLoadingSpinner();
-    }, 800);
+        isSearching = false;
+    }, 400); // Reduced delay for better UX
+}
+
+// Quick search function for buttons
+function quickSearch(drugId) {
+    heroSearchInput.value = drugId;
+    searchDrug();
 }
 
 // Perform search in database
@@ -465,7 +524,7 @@ function performSearch(searchTerm) {
     return results;
 }
 
-// Display search results
+// Display search results with enhanced animations
 function displaySearchResults(results, searchTerm) {
     currentSearchResults = results;
 
@@ -474,22 +533,85 @@ function displaySearchResults(results, searchTerm) {
         return;
     }
 
+    // Update results title
+    resultsTitle.textContent = `Search Results (${results.length})`;
+
     // Show results section
     searchResultsSection.classList.remove('hidden');
     
-    // Clear previous results
-    resultsContainer.innerHTML = '';
+    // Clear previous results with fade out
+    resultsContainer.style.opacity = '0';
+    setTimeout(() => {
+        resultsContainer.innerHTML = '';
+        
+        // Display each result with staggered animation
+        results.forEach((drug, index) => {
+            setTimeout(() => {
+                const drugCard = createDrugCard(drug, index);
+                resultsContainer.appendChild(drugCard);
+            }, index * 100);
+        });
+        
+        resultsContainer.style.opacity = '1';
+    }, 200);
 
-    // Display each result
-    results.forEach((drug, index) => {
-        const drugCard = createDrugCard(drug, index);
-        resultsContainer.appendChild(drugCard);
-    });
-
-    // Scroll to results
-    searchResultsSection.scrollIntoView({ behavior: 'smooth' });
+    // Smooth scroll to results
+    setTimeout(() => {
+        searchResultsSection.scrollIntoView({ 
+            behavior: 'smooth',
+            block: 'start'
+        });
+    }, 300);
 
     showNotification(`Found ${results.length} result(s) for "${searchTerm}"`, 'success');
+}
+
+// Search suggestions functionality
+function showSearchSuggestions(query) {
+    if (!query || query.length < 2) {
+        hideSuggestions();
+        return;
+    }
+
+    const suggestions = getSuggestions(query.toUpperCase());
+    
+    if (suggestions.length === 0) {
+        hideSuggestions();
+        return;
+    }
+
+    searchSuggestions.innerHTML = suggestions.map(drug => `
+        <div class="suggestion-item" onclick="selectSuggestion('${drug.id}')">
+            <span class="suggestion-name">${drug.name}</span>
+            <span class="suggestion-id">${drug.id}</span>
+        </div>
+    `).join('');
+
+    searchSuggestions.classList.remove('hidden');
+}
+
+function getSuggestions(query) {
+    const suggestions = [];
+    
+    Object.values(drugDatabase).forEach(drug => {
+        if (drug.id.includes(query) || 
+            drug.name.toUpperCase().includes(query) ||
+            drug.genericName.toUpperCase().includes(query)) {
+            suggestions.push(drug);
+        }
+    });
+
+    return suggestions.slice(0, 5); // Limit to 5 suggestions
+}
+
+function selectSuggestion(drugId) {
+    heroSearchInput.value = drugId;
+    hideSuggestions();
+    searchDrug();
+}
+
+function hideSuggestions() {
+    searchSuggestions.classList.add('hidden');
 }
 
 // Create drug card HTML
@@ -595,13 +717,18 @@ function showNoResults(searchTerm) {
     searchResultsSection.scrollIntoView({ behavior: 'smooth' });
 }
 
-// Clear search results
+// Clear search results with animation
 function clearResults() {
-    searchResultsSection.classList.add('hidden');
-    resultsContainer.innerHTML = '';
-    heroSearchInput.value = '';
-    currentSearchResults = [];
-    showNotification('Search results cleared', 'info');
+    resultsContainer.style.opacity = '0';
+    setTimeout(() => {
+        searchResultsSection.classList.add('hidden');
+        resultsContainer.innerHTML = '';
+        heroSearchInput.value = '';
+        currentSearchResults = [];
+        resultsTitle.textContent = 'Search Results';
+        resultsContainer.style.opacity = '1';
+        showNotification('Search results cleared', 'info');
+    }, 200);
 }
 
 // Show loading spinner
@@ -752,21 +879,84 @@ function generatePrintContent(results) {
     `;
 }
 
-// Keyboard shortcuts
+// Enhanced keyboard shortcuts and navigation
 document.addEventListener('keydown', function(e) {
     // Ctrl/Cmd + K to focus search
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
         heroSearchInput.focus();
+        heroSearchInput.select();
     }
     
-    // Escape to clear results
+    // Escape to clear results or hide suggestions
     if (e.key === 'Escape') {
-        if (!searchResultsSection.classList.contains('hidden')) {
+        if (!searchSuggestions.classList.contains('hidden')) {
+            hideSuggestions();
+        } else if (!searchResultsSection.classList.contains('hidden')) {
             clearResults();
+        } else {
+            heroSearchInput.blur();
+        }
+    }
+    
+    // Arrow key navigation for suggestions
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        const suggestions = document.querySelectorAll('.suggestion-item');
+        if (suggestions.length > 0) {
+            e.preventDefault();
+            navigateSuggestions(e.key === 'ArrowDown');
         }
     }
 });
+
+// Navigation for search suggestions
+let currentSuggestionIndex = -1;
+
+function navigateSuggestions(isDown) {
+    const suggestions = document.querySelectorAll('.suggestion-item');
+    
+    // Remove previous highlight
+    suggestions.forEach(item => item.classList.remove('highlighted'));
+    
+    if (isDown) {
+        currentSuggestionIndex = (currentSuggestionIndex + 1) % suggestions.length;
+    } else {
+        currentSuggestionIndex = currentSuggestionIndex <= 0 ? 
+            suggestions.length - 1 : currentSuggestionIndex - 1;
+    }
+    
+    // Highlight current suggestion
+    if (suggestions[currentSuggestionIndex]) {
+        suggestions[currentSuggestionIndex].classList.add('highlighted');
+        suggestions[currentSuggestionIndex].scrollIntoView({ block: 'nearest' });
+    }
+}
+
+// Performance monitoring
+const performanceMetrics = {
+    searchTimes: [],
+    cacheHits: 0,
+    totalSearches: 0
+};
+
+function trackSearchPerformance(startTime, fromCache = false) {
+    const endTime = performance.now();
+    const searchTime = endTime - startTime;
+    
+    performanceMetrics.searchTimes.push(searchTime);
+    performanceMetrics.totalSearches++;
+    
+    if (fromCache) {
+        performanceMetrics.cacheHits++;
+    }
+    
+    // Keep only last 10 search times
+    if (performanceMetrics.searchTimes.length > 10) {
+        performanceMetrics.searchTimes.shift();
+    }
+    
+    console.log(`Search completed in ${searchTime.toFixed(2)}ms`, fromCache ? '(cached)' : '');
+}
 
 // Add search suggestions (future enhancement)
 function addSearchSuggestions() {
